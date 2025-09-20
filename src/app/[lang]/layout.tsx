@@ -3,6 +3,7 @@ import { RootProvider } from 'fumadocs-ui/provider';
 import { Inter } from 'next/font/google';
 import { defineI18nUI } from 'fumadocs-ui/i18n';
 import { i18n } from '@/lib/i18n';
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -43,6 +44,7 @@ export default async function RootLayout({
         <RootProvider
           i18n={provider(lang)}
         >{children}</RootProvider>
+        <Toaster />
       </body>
     </html>
   );

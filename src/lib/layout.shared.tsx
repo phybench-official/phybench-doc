@@ -22,11 +22,17 @@ export function baseOptions(locale: string): BaseLayoutProps {
           >
             <circle cx={12} cy={12} r={12} fill="currentColor" />
           </svg>
-          My App
+          PHYBench
         </>
       ),
     },
     // see https://fumadocs.dev/docs/ui/navigation/links
-    links: [],
+    links: [
+      {
+        text: "PHYBench 官网",
+        url: `https://www.phybench.cn`,
+      },
+    ],
+    githubUrl: 'https://github.com/phybench-official/phybench-doc',
   };
 }

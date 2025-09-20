@@ -11,9 +11,13 @@ export default async function Layout({
   children: ReactNode;
 }) {
   const { lang } = await params;
+  const base = baseOptions(lang);
 
   return (
-    <DocsLayout {...baseOptions(lang)} tree={source.pageTree[lang]}>
+    <DocsLayout 
+      {...base}
+      tree={source.pageTree[lang]}
+    >
       {children}
     </DocsLayout>
   );

@@ -1,0 +1,918 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Physics Benchmark Evaluation API",
+    "description": "\n    物理基准评估微服务\n    ",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://evaluate.phybench.cn",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["info"],
+        "summary": "API根端点",
+        "description": "API根端点 - 返回基本信息和功能概览\n\n返回API的基本信息，包括版本、功能列表和文档链接。\n适用于快速了解API能力和验证服务可用性。",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": ["health"],
+        "summary": "系统健康检查",
+        "description": "检查各个依赖服务的运行状态",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks": {
+      "post": {
+        "tags": ["tasks"],
+        "summary": "创建评估任务",
+        "description": "上传模型答案文件并创建新的评估任务",
+        "operationId": "create_task_tasks_post",
+        "parameters": [
+          {
+            "name": "max_concurrent_tasks",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 8,
+              "title": "Max Concurrent Tasks"
+            }
+          },
+          {
+            "name": "simplify_time_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 3.0,
+              "title": "Simplify Time Limit"
+            }
+          },
+          {
+            "name": "equals_time_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Equals Time Limit"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_task_tasks_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TaskCreateResponse" }
+              }
+            }
+          },
+          "201": {
+            "description": "任务创建成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "task_id": "task_12345abcde",
+                  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGci...",
+                  "status": "PENDING",
+                  "created_at": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "413": {
+            "description": "文件太大",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "415": {
+            "description": "不支持的文件类型",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "查询任务状态",
+        "description": "根据任务ID和访问令牌查询评估任务的当前状态和进度",
+        "operationId": "get_task_status_tasks__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Task Id" }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Bearer token (格式: 'Bearer <token>')",
+              "title": "Authorization"
+            },
+            "description": "Bearer token (格式: 'Bearer <token>')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取任务状态",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TaskStatusResponse" },
+                "example": {
+                  "task_id": "task_12345abcde",
+                  "status": "RUNNING",
+                  "progress": 75,
+                  "queue_info": {
+                    "position": 0,
+                    "total_pending": 3,
+                    "estimated_wait_time": 0,
+                    "status": "running"
+                  },
+                  "created_at": "2024-01-01T12:00:00Z",
+                  "started_at": "2024-01-01T12:01:00Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失败",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["tasks"],
+        "summary": "删除/取消任务",
+        "description": "删除或取消指定的评估任务，并清理相关资源",
+        "operationId": "delete_task_tasks__task_id__delete",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Task Id" }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Bearer token (格式: 'Bearer <token>')",
+              "title": "Authorization"
+            },
+            "description": "Bearer token (格式: 'Bearer <token>')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "任务删除成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TaskDeleteResponse" },
+                "example": {
+                  "task_id": "task_12345abcde",
+                  "message": "Task deleted successfully",
+                  "deleted_at": "2024-01-01T12:10:00Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失败",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}/scores": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "查询任务详细分数",
+        "description": "获取指定任务中所有题目的详细评估分数，包括每道题的EED分数、类别等信息",
+        "operationId": "get_task_detailed_scores_tasks__task_id__scores_get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Task Id" }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Bearer token (格式: 'Bearer <token>')",
+              "title": "Authorization"
+            },
+            "description": "Bearer token (格式: 'Bearer <token>')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取任务详细分数",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDetailedScoresResponse"
+                },
+                "example": {
+                  "task_id": "task_12345abcde",
+                  "status": "success",
+                  "total_problems": 100,
+                  "completed_problems": 95,
+                  "problem_scores": {
+                    "459": {
+                      "problem_id": 459,
+                      "eed_score": 85.2,
+                      "category": "ELECTRICITY",
+                      "model_name": "gpt-4",
+                      "is_exact_match": false,
+                      "status": "success"
+                    },
+                    "566": {
+                      "problem_id": 566,
+                      "eed_score": 92.1,
+                      "category": "ADVANCED",
+                      "model_name": "gpt-4",
+                      "is_exact_match": true,
+                      "status": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失败",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_create_task_tasks_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File",
+            "description": "包含模型答案的JSON文件 (最大10MB)"
+          }
+        },
+        "type": "object",
+        "required": ["file"],
+        "title": "Body_create_task_tasks_post"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "description": "Error type/code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message"
+          },
+          "details": {
+            "anyOf": [{}, { "type": "null" }],
+            "title": "Details",
+            "description": "Additional error details"
+          }
+        },
+        "type": "object",
+        "required": ["error", "message"],
+        "title": "ErrorResponse",
+        "description": "Standard error response schema",
+        "example": {
+          "details": {
+            "expected": "application/json",
+            "field": "file",
+            "received": "text/plain"
+          },
+          "error": "validation_error",
+          "message": "Invalid file format"
+        }
+      },
+      "EvaluationResult": {
+        "properties": {
+          "total_problems": {
+            "type": "integer",
+            "title": "Total Problems",
+            "description": "Total number of problems evaluated"
+          },
+          "completed_problems": {
+            "type": "integer",
+            "title": "Completed Problems",
+            "description": "Number of problems completed"
+          },
+          "eed_scores": {
+            "additionalProperties": { "type": "number" },
+            "type": "object",
+            "title": "Eed Scores",
+            "description": "EED scores for each category"
+          },
+          "acc_scores": {
+            "additionalProperties": { "type": "number" },
+            "type": "object",
+            "title": "Acc Scores",
+            "description": "Accuracy scores for each category"
+          },
+          "mean_eed": {
+            "type": "number",
+            "title": "Mean Eed",
+            "description": "Overall mean EED score"
+          },
+          "accuracy": {
+            "type": "number",
+            "title": "Accuracy",
+            "description": "Overall accuracy rate"
+          },
+          "processing_time": {
+            "type": "number",
+            "title": "Processing Time",
+            "description": "Total processing time in seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_problems",
+          "completed_problems",
+          "eed_scores",
+          "acc_scores",
+          "mean_eed",
+          "accuracy",
+          "processing_time"
+        ],
+        "title": "EvaluationResult",
+        "description": "Physics evaluation result data with category-wise scores",
+        "example": {
+          "acc_scores": {
+            "ADVANCED": 0.82,
+            "ELECTRICITY": 0.78,
+            "MECHANICS": 0.85,
+            "MODERN": 0.77,
+            "OPTICS": 0.88,
+            "THERMODYNAMICS": 0.92
+          },
+          "accuracy": 0.85,
+          "completed_problems": 95,
+          "eed_scores": {
+            "ADVANCED": 82.4,
+            "ELECTRICITY": 78.3,
+            "MECHANICS": 85.2,
+            "MODERN": 76.8,
+            "OPTICS": 88.5,
+            "THERMODYNAMICS": 92.1
+          },
+          "mean_eed": 83.9,
+          "processing_time": 45.2,
+          "total_problems": 100
+        }
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": { "$ref": "#/components/schemas/ValidationError" },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Overall health status",
+            "default": "ok"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "Health check timestamp"
+          },
+          "services": {
+            "additionalProperties": { "type": "boolean" },
+            "type": "object",
+            "title": "Services",
+            "description": "Service availability status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "API version",
+            "default": "1.0.0"
+          },
+          "uptime": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Uptime",
+            "description": "Application uptime in seconds"
+          }
+        },
+        "type": "object",
+        "required": ["timestamp"],
+        "title": "HealthResponse",
+        "description": "Health check response schema",
+        "example": {
+          "services": {
+            "celery": true,
+            "database": true,
+            "minio": true,
+            "redis": true
+          },
+          "status": "ok",
+          "timestamp": "2024-01-01T12:00:00Z",
+          "uptime": 3600.5,
+          "version": "1.0.0"
+        }
+      },
+      "ProblemScore": {
+        "properties": {
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id",
+            "description": "Problem identifier"
+          },
+          "eed_score": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Eed Score",
+            "description": "EED score for this problem"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Problem category"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name",
+            "description": "Model name"
+          },
+          "is_exact_match": {
+            "type": "boolean",
+            "title": "Is Exact Match",
+            "description": "Whether the answer is an exact match",
+            "default": false
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Processing status of this problem"
+          }
+        },
+        "type": "object",
+        "required": ["problem_id", "category", "model_name", "status"],
+        "title": "ProblemScore",
+        "description": "Individual problem score details",
+        "example": {
+          "category": "ELECTRICITY",
+          "eed_score": 85.2,
+          "is_exact_match": false,
+          "model_name": "gpt-4",
+          "problem_id": 459,
+          "status": "success"
+        }
+      },
+      "QueueInfo": {
+        "properties": {
+          "position": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Position",
+            "description": "Position in queue (0 means currently running, None if unknown)"
+          },
+          "total_pending": {
+            "type": "integer",
+            "title": "Total Pending",
+            "description": "Total number of pending tasks in queue"
+          },
+          "estimated_wait_time": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Estimated Wait Time",
+            "description": "Estimated wait time in seconds"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Queue status",
+            "default": "unknown"
+          }
+        },
+        "type": "object",
+        "required": ["total_pending"],
+        "title": "QueueInfo",
+        "description": "Queue position information",
+        "example": {
+          "estimated_wait_time": 120,
+          "position": 2,
+          "status": "active",
+          "total_pending": 5
+        }
+      },
+      "TaskCreateResponse": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "Unique task identifier"
+          },
+          "access_token": {
+            "type": "string",
+            "title": "Access Token",
+            "description": "JWT token for task access"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus",
+            "description": "Current task status",
+            "default": "pending"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Task creation timestamp"
+          }
+        },
+        "type": "object",
+        "required": ["task_id", "access_token", "created_at"],
+        "title": "TaskCreateResponse",
+        "description": "Response schema for task creation",
+        "example": {
+          "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.example",
+          "created_at": "2024-01-01T12:00:00Z",
+          "status": "PENDING",
+          "task_id": "task_12345abcde"
+        }
+      },
+      "TaskDeleteResponse": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "Unique task identifier"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Deletion confirmation message"
+          },
+          "deleted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deleted At",
+            "description": "Deletion timestamp"
+          }
+        },
+        "type": "object",
+        "required": ["task_id", "message", "deleted_at"],
+        "title": "TaskDeleteResponse",
+        "description": "Response schema for task deletion",
+        "example": {
+          "deleted_at": "2024-01-01T12:10:00Z",
+          "message": "Task deleted successfully",
+          "task_id": "task_12345abcde"
+        }
+      },
+      "TaskDetailedScoresResponse": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "Task identifier"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Task status"
+          },
+          "total_problems": {
+            "type": "integer",
+            "title": "Total Problems",
+            "description": "Total number of problems"
+          },
+          "completed_problems": {
+            "type": "integer",
+            "title": "Completed Problems",
+            "description": "Number of completed problems"
+          },
+          "problem_scores": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ProblemScore"
+            },
+            "type": "object",
+            "title": "Problem Scores",
+            "description": "Scores for each problem (key: problem_id)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "status",
+          "total_problems",
+          "completed_problems",
+          "problem_scores"
+        ],
+        "title": "TaskDetailedScoresResponse",
+        "description": "Detailed scores response for all problems in a task",
+        "example": {
+          "completed_problems": 95,
+          "problem_scores": {
+            "459": {
+              "category": "ELECTRICITY",
+              "eed_score": 85.2,
+              "is_exact_match": false,
+              "model_name": "gpt-4",
+              "problem_id": 459,
+              "status": "success"
+            },
+            "566": {
+              "category": "ADVANCED",
+              "eed_score": 92.1,
+              "is_exact_match": true,
+              "model_name": "gpt-4",
+              "problem_id": 566,
+              "status": "success"
+            }
+          },
+          "status": "success",
+          "task_id": "task_12345abcde",
+          "total_problems": 100
+        }
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": ["pending", "processing", "success", "failure", "cancelled"],
+        "title": "TaskStatus",
+        "description": "Task status enumeration"
+      },
+      "TaskStatusResponse": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "Unique task identifier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus",
+            "description": "Current task status"
+          },
+          "progress": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Progress",
+            "description": "Progress percentage (0-100)"
+          },
+          "queue_info": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/QueueInfo" },
+              { "type": "null" }
+            ],
+            "description": "Queue position and wait time information"
+          },
+          "result_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Result Url",
+            "description": "Download URL for result file (available when completed)"
+          },
+          "result_data": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/EvaluationResult" },
+              { "type": "null" }
+            ],
+            "description": "Evaluation result data (available when completed)"
+          },
+          "error_message": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Error Message",
+            "description": "Error message if task failed"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Task creation timestamp"
+          },
+          "started_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Started At",
+            "description": "Task start timestamp"
+          },
+          "completed_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Completed At",
+            "description": "Task completion timestamp"
+          }
+        },
+        "type": "object",
+        "required": ["task_id", "status", "progress", "created_at"],
+        "title": "TaskStatusResponse",
+        "description": "Response schema for task status",
+        "example": {
+          "created_at": "2024-01-01T12:00:00Z",
+          "progress": 75,
+          "queue_info": {
+            "estimated_wait_time": 0,
+            "position": 0,
+            "status": "running",
+            "total_pending": 3
+          },
+          "started_at": "2024-01-01T12:01:00Z",
+          "status": "RUNNING",
+          "task_id": "task_12345abcde"
+        }
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": { "anyOf": [{ "type": "string" }, { "type": "integer" }] },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": { "type": "string", "title": "Message" },
+          "type": { "type": "string", "title": "Error Type" }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
