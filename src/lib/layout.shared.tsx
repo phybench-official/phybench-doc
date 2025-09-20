@@ -29,7 +29,7 @@ export function baseOptions(locale: string): BaseLayoutProps {
     // see https://fumadocs.dev/docs/ui/navigation/links
     links: [
       {
-        text: "PHYBench 官网",
+        text: locale === 'cn' ? 'PHYBench 官网' : 'PHYBench Home',
         url: `https://www.phybench.cn`,
       },
     ],
